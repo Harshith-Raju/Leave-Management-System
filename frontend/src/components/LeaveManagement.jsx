@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import emailjs from 'emailjs-com';
 import './LeaveManagement.css';
 
 const LeaveManagement = ({ user, token }) => {
@@ -17,6 +18,19 @@ const LeaveManagement = ({ user, token }) => {
     admin_reason: ''
   });
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [emailData, setEmailData] = useState({
+    employee_email: '',
+    employee_name: '',
+    start_date: '',
+    end_date: '',
+    status: '',
+    admin_reason: ''
+  });
+
+  // Initialize EmailJS
+  useEffect(() => {
+    emailjs.init("5uvXXP0huD9kzNw41"); // Replace with your actual EmailJS public key
+  }, []);
 
   useEffect(() => {
     if (view === 'my-leaves') {
@@ -112,13 +126,46 @@ const LeaveManagement = ({ user, token }) => {
     }));
   };
 
-  const openStatusModal = (leaveId, status) => {
+  const openStatusModal = (leaveId, status, employeeEmail, employeeName, startDate, endDate) => {
     setSelectedLeave(leaveId);
     setStatusUpdateData({
       status: status,
       admin_reason: ''
     });
+    setEmailData({
+      employee_email: employeeEmail,
+      employee_name: employeeName,
+      start_date: startDate,
+      end_date: endDate,
+      status: status,
+      admin_reason: ''
+    });
     setShowStatusModal(true);
+  };
+
+  const sendEmailNotification = async () => {
+    try {
+      const templateParams = {
+        to_email: emailData.employee_email,
+        to_name: emailData.employee_name,
+        from_name: user.name,
+        start_date: new Date(emailData.start_date).toLocaleDateString(),
+        end_date: new Date(emailData.end_date).toLocaleDateString(),
+        status: emailData.status,
+        admin_reason: emailData.admin_reason,
+        reply_to: user.email
+      };
+
+      await emailjs.send(
+        'service_bp4lys5', // Replace with your EmailJS service ID
+        'template_wcs5s6m', // Replace with your EmailJS template ID
+        templateParams
+      );
+      
+      console.log('Email sent successfully');
+    } catch (error) {
+      console.error('Failed to send email:', error);
+    }
   };
 
   const handleStatusUpdate = async () => {
@@ -133,13 +180,22 @@ const LeaveManagement = ({ user, token }) => {
       });
       
       if (response.ok) {
+        // Update email data with admin reason
+        setEmailData(prev => ({
+          ...prev,
+          admin_reason: statusUpdateData.admin_reason
+        }));
+        
+        // Send email notification
+        await sendEmailNotification();
+        
         setShowStatusModal(false);
         if (view === 'my-leaves') {
           fetchMyLeaves();
         } else {
           fetchTeamLeaves();
         }
-        alert(`Leave ${statusUpdateData.status.toLowerCase()} successfully!`);
+        alert(`Leave ${statusUpdateData.status.toLowerCase()} successfully! Email notification sent.`);
       } else {
         const error = await response.json();
         alert(`Error: ${error.error}`);
@@ -286,7 +342,7 @@ const LeaveManagement = ({ user, token }) => {
                     {leave.admin_reason ? (
                       <div className="admin-reason">
                         <i className="fas fa-comment-dots"></i>
-                        <span>{leave.admin_reason}</span>
+                        {leave.admin_reason}
                       </div>
                     ) : (
                       <span className="no-reason">No feedback provided</span>
@@ -297,13 +353,27 @@ const LeaveManagement = ({ user, token }) => {
                       <div className="action-buttons">
                         <button 
                           className="btn btn-success btn-sm"
-                          onClick={() => openStatusModal(leave.id, 'APPROVED')}
+                          onClick={() => openStatusModal(
+                            leave.id, 
+                            'APPROVED', 
+                            leave.employee_email, 
+                            leave.employee_name,
+                            leave.start_date,
+                            leave.end_date
+                          )}
                         >
                           <i className="fas fa-check"></i> Approve
                         </button>
                         <button 
                           className="btn btn-danger btn-sm"
-                          onClick={() => openStatusModal(leave.id, 'REJECTED')}
+                          onClick={() => openStatusModal(
+                            leave.id, 
+                            'REJECTED', 
+                            leave.employee_email, 
+                            leave.employee_name,
+                            leave.start_date,
+                            leave.end_date
+                          )}
                         >
                           <i className="fas fa-times"></i> Reject
                         </button>
@@ -322,6 +392,7 @@ const LeaveManagement = ({ user, token }) => {
         )}
       </div>
 
+      {/* Status Update Modal */}
       {showStatusModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -358,6 +429,10 @@ const LeaveManagement = ({ user, token }) => {
                   }
                   required={statusUpdateData.status === 'REJECTED'}
                 ></textarea>
+              </div>
+              <div className="email-notification">
+                <i className="fas fa-envelope"></i>
+                <span>An email notification will be sent to the employee</span>
               </div>
             </div>
             <div className="modal-actions">
