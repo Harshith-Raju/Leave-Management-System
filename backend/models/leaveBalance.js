@@ -1,31 +1,22 @@
-const db = require('../config/database');
+const mongoose = require('mongoose');
 
-const LeaveBalance = {
-  // Get leave balance for an employee
-  findByEmployeeId: (employeeId, callback) => {
-    const query = 'SELECT * FROM leave_balances WHERE employee_id = ?';
-    db.query(query, [employeeId], callback);
+const leaveBalanceSchema = new mongoose.Schema({
+  employee_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    required: true,
+    unique: true
   },
-  
-  // Update leave balance
-  update: (employeeId, newBalance, callback) => {
-    const query = 'UPDATE leave_balances SET balance = ? WHERE employee_id = ?';
-    db.query(query, [newBalance, employeeId], callback);
-  },
-  
-  // Deduct leave days (with transaction handling)
-  deductDays: (employeeId, days, callback) => {
-    const query = 'UPDATE leave_balances SET balance = balance - ? WHERE employee_id = ? AND balance >= ?';
-    db.query(query, [days, employeeId, days], (err, results) => {
-      if (err) return callback(err);
-      
-      if (results.affectedRows === 0) {
-        return callback(new Error('Insufficient leave balance'));
-      }
-      
-      callback(null, results);
-    });
+  balance: {
+    type: Number,
+    required: true,
+    default: 20,
+    min: 0
   }
-};
+}, {
+  timestamps: true
+});
+
+const LeaveBalance = mongoose.model('LeaveBalance', leaveBalanceSchema);
 
 module.exports = LeaveBalance;

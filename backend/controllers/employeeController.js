@@ -2,110 +2,155 @@ const Employee = require('../models/employee');
 const LeaveBalance = require('../models/leaveBalance');
 
 const employeeController = {
-  // Get all employees
-  getAllEmployees: (req, res) => {
-    Employee.findAll((err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      // Remove passwords from response
-      const employees = results.map(employee => {
-        const { password, ...employeeWithoutPassword } = employee;
-        return employeeWithoutPassword;
-      });
-      
-      res.json(employees);
-    });
+  getAllEmployees: async (req, res) => {
+    try {
+      const employees = await Employee.find()
+        .populate('department_id', 'name')
+        .select('-password');
+
+      const result = employees.map(employee => ({
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        role: employee.role,
+        department_id: employee.department_id?._id,
+        department_name: employee.department_id?.name,
+        joining_date: employee.joining_date,
+        createdAt: employee.createdAt,
+        updatedAt: employee.updatedAt
+      }));
+
+      res.json(result);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   },
-  
-  // Get employee by ID
-  getEmployeeById: (req, res) => {
-    const { id } = req.params;
-    
-    Employee.findById(id, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
+
+  getEmployeeById: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const employee = await Employee.findById(id)
+        .populate('department_id', 'name')
+        .select('-password');
+
+      if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
       }
-      
-      const employee = results[0];
-      // Remove password from response
-      delete employee.password;
-      
-      res.json(employee);
-    });
+
+      const result = {
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        role: employee.role,
+        department_id: employee.department_id?._id,
+        department_name: employee.department_id?.name,
+        joining_date: employee.joining_date,
+        createdAt: employee.createdAt,
+        updatedAt: employee.updatedAt
+      };
+
+      res.json(result);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   },
-  
-  // Create new employee
-  createEmployee: (req, res) => {
-    Employee.create(req.body, (err, result) => {
-      if (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(400).json({ error: 'Email already exists' });
+
+  createEmployee: async (req, res) => {
+    try {
+      const employee = new Employee(req.body);
+      await employee.save();
+
+      const leaveBalance = new LeaveBalance({
+        employee_id: employee._id,
+        balance: 20
+      });
+      await leaveBalance.save();
+
+      res.status(201).json({
+        message: 'Employee created successfully',
+        employee: {
+          id: employee._id,
+          name: employee.name,
+          email: employee.email,
+          department_id: employee.department_id,
+          joining_date: employee.joining_date
         }
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      res.status(201).json({ 
-        message: 'Employee created successfully', 
-        employee: result 
       });
-    });
-  },
-  
-  // Update employee
-  updateEmployee: (req, res) => {
-    const { id } = req.params;
-    
-    Employee.update(id, req.body, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
+    } catch (err) {
+      console.error(err);
+      if (err.code === 11000) {
+        return res.status(400).json({ error: 'Email already exists' });
       }
-      
-      if (results.affectedRows === 0) {
+      res.status(500).json({ error: 'Database error' });
+    }
+  },
+
+  updateEmployee: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, department_id, joining_date } = req.body;
+
+      const employee = await Employee.findByIdAndUpdate(
+        id,
+        { name, department_id, joining_date },
+        { new: true, runValidators: true }
+      );
+
+      if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
       }
-      
+
       res.json({ message: 'Employee updated successfully' });
-    });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   },
-  
-  // Delete employee
-  deleteEmployee: (req, res) => {
-    const { id } = req.params;
-    
-    Employee.delete(id, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.affectedRows === 0) {
+
+  deleteEmployee: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const employee = await Employee.findByIdAndDelete(id);
+
+      if (!employee) {
         return res.status(404).json({ error: 'Employee not found' });
       }
-      
+
+      await LeaveBalance.deleteOne({ employee_id: id });
+
       res.json({ message: 'Employee deleted successfully' });
-    });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   },
-  
-  // Get employee leave balance
-  getLeaveBalance: (req, res) => {
-    const employeeId = req.params.id || req.user.id;
-    
-    LeaveBalance.findByEmployeeId(employeeId, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
+
+  getLeaveBalance: async (req, res) => {
+    try {
+      const employeeId = req.params.id || req.user.id;
+
+      const leaveBalance = await LeaveBalance.findOne({ employee_id: employeeId });
+
+      if (!leaveBalance) {
         return res.status(404).json({ error: 'Leave balance not found' });
       }
-      
-      res.json(results[0]);
-    });
+
+      const result = {
+        id: leaveBalance._id,
+        employee_id: leaveBalance.employee_id,
+        balance: leaveBalance.balance,
+        last_updated: leaveBalance.updatedAt
+      };
+
+      res.json(result);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Database error' });
+    }
   }
 };
 

@@ -1,72 +1,56 @@
-const db = require('../config/database');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const Employee = {
-  // Create a new employee
-  create: (employeeData, callback) => {
-    bcrypt.hash(employeeData.password, 10, (err, hashedPassword) => {
-      if (err) return callback(err);
-      
-      const query = `
-        INSERT INTO employees (name, email, department_id, joining_date, password) 
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      
-      db.query(
-        query, 
-        [employeeData.name, employeeData.email, employeeData.department_id, employeeData.joining_date, hashedPassword], 
-        (err, results) => {
-          if (err) return callback(err);
-          
-          // Initialize leave balance for the new employee
-          const balanceQuery = 'INSERT INTO leave_balances (employee_id, balance) VALUES (?, ?)';
-          db.query(balanceQuery, [results.insertId, 20], (err) => {
-            if (err) return callback(err);
-            callback(null, { id: results.insertId, ...employeeData });
-          });
-        }
-      );
-    });
+const employeeSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
   },
-  
-  // Find employee by email
-  findByEmail: (email, callback) => {
-    const query = 'SELECT * FROM employees WHERE email = ?';
-    db.query(query, [email], callback);
+  email: {
+    type: String,
+    required: true,
+    unique: true
   },
-  
-  // Find employee by ID
-  findById: (id, callback) => {
-    const query = `
-      SELECT e.*, d.name as department_name 
-      FROM employees e 
-      LEFT JOIN departments d ON e.department_id = d.id 
-      WHERE e.id = ?
-    `;
-    db.query(query, [id], callback);
+  department_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Department',
+    required: true
   },
-  
-  // Get all employees
-  findAll: (callback) => {
-    const query = `
-      SELECT e.*, d.name as department_name 
-      FROM employees e 
-      LEFT JOIN departments d ON e.department_id = d.id
-    `;
-    db.query(query, callback);
+  joining_date: {
+    type: Date,
+    required: true
   },
-  
-  // Update employee
-  update: (id, employeeData, callback) => {
-    const query = 'UPDATE employees SET name = ?, department_id = ?, joining_date = ? WHERE id = ?';
-    db.query(query, [employeeData.name, employeeData.department_id, employeeData.joining_date, id], callback);
+  password: {
+    type: String,
+    required: true
   },
-  
-  // Delete employee
-  delete: (id, callback) => {
-    const query = 'DELETE FROM employees WHERE id = ?';
-    db.query(query, [id], callback);
+  role: {
+    type: String,
+    enum: ['employee', 'manager', 'admin'],
+    default: 'employee'
   }
+}, {
+  timestamps: true
+});
+
+employeeSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+employeeSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
+
+const Employee = mongoose.model('Employee', employeeSchema);
 
 module.exports = Employee;
