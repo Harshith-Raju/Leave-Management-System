@@ -1,91 +1,199 @@
-# Leave Management System
+## Leave Management System (LMS)
 
-A mini leave management system for startups with employee management, leave application, and approval workflows.
+A full‑stack Leave Management System with role-based access for **employees**, **managers**, and **admins**. It supports onboarding employees, applying for leaves, approvals/rejections, and automatic leave balance validation.
+
+---
+
+## Why this project
+
+This project demonstrates an end-to-end product flow:
+- **Auth + RBAC** (JWT + role checks)
+- **CRUD** for employee management
+- **Workflow** for leave requests (apply → review → approve/reject)
+- **Business rules** (balance checks, overlap checks, joining-date checks)
+- **Relational modeling** with MySQL (employees, departments, leave requests, balances)
+
+---
 
 ## Features
 
-1. Add and manage employees
-2. Apply for leave with validation
-3. Approve/reject leave requests
-4. Track leave balances
-5. Handle edge cases (overlapping leaves, insufficient balance, etc.)
+- **Authentication**
+  - JWT login
+  - Protected routes with `Authorization: Bearer <token>`
+  - Roles: `employee`, `manager`, `admin`
 
-## Tech Stack
+- **Employee management (admin/manager)**
+  - List employees with department mapping
+  - Create/update/delete employees (admin-only for mutations)
 
-- Frontend: HTML, CSS, JavaScript
-- Backend: Node.js, Express
-- Database: MySQL
+- **Leave management**
+  - Employees can apply for leave with a reason and date range
+  - Managers/Admins can approve/reject requests
+  - “My Leaves” view for employees
 
-## Setup Instructions
+- **Leave balance**
+  - Default balance initialization on employee creation
+  - Balance deduction rules and validations
 
-1. **Database Setup**:
-   - Create MySQL database using the schema in `database/schema.sql`
-   - Update database credentials in `backend/config/db.js`
+---
 
-2. **Backend Setup**:
-   - Navigate to `backend` folder
-   - Run `npm install`
-   - Start server with `node server.js`
+## Tech stack
 
-3. **Frontend Setup**:
-   - Open `frontend/index.html` in browser
-   - Make sure backend is running (default: http://localhost:3000)
+- **Frontend**: React (Create React App)
+- **Backend**: Node.js + Express
+- **Database**: MySQL
+- **Auth**: JWT
 
-## API Endpoints
+---
 
-- `GET /api/employees` - Get all employees
-- `POST /api/employees` - Add new employee
-- `POST /api/leaves` - Apply for leave
-- `PUT /api/leaves/:id` - Approve/reject leave
-- `GET /api/leaves/balance/:employeeId` - Get leave balance
-- `GET /api/leaves` - Get pending leaves (for approval)
+## High-level architecture
 
-## Edge Cases Handled
+- **Frontend (`frontend/`)**
+  - React pages/components
+  - Calls backend APIs on `http://localhost:3000`
 
-1. Leave before joining date
-2. Insufficient leave balance
-3. Overlapping leaves
-4. Invalid date ranges
-5. Non-existent employee
-6. Duplicate leave requests
-7. Negative leave balance
-8. Backdated leave applications
+- **Backend (`backend/`)**
+  - Express REST API
+  - Controllers + models (MySQL queries)
+  - Middleware for JWT verification and role checks
 
-## Potential Improvements
+- **Database**
+  - Schema + seed logic via `backend/scripts/initDB.js`
+  - SQL file available at `backend/database.sql`
 
-1. Add user authentication
-2. Implement different leave types
-3. Add leave accrual system
-4. Email notifications
-5. Dashboard with analytics
-6. Role-based access control
+---
 
+## Quick start (local)
 
+### Prerequisites
 
+- Node.js **18+**
+- MySQL **8+**
 
+### 1) Configure environment variables
 
+Create a `.env` file at project root (`LMS/.env`):
 
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjb21wYW55LmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NTYwODYzNywiZXhwIjoxNzU2MjEzNDM3fQ.4tNLvOhzSJu4bH3Va5cYk2TXZk9rI00wq28yPi-BJeA"
+```env
+PORT=3000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=lms
+JWT_SECRET=your_jwt_secret
+```
 
+### 2) Start the backend
 
+```bash
+cd backend
+npm install
+npm run init-db
+npm run dev
+```
 
- 2. Login and get token
-POST /auth/login
+Backend runs on `http://localhost:3000`.
 
-# 3. Test employee endpoints
-GET /employees
-POST /employees
-GET /employees/1
-GET /employees/1/balance
+### 3) Start the frontend
 
-# 4. Test leave endpoints
-POST /leaves/apply
-GET /leaves/my-leaves
-GET /leaves
-PATCH /leaves/1/status
+```bash
+cd frontend
+npm install
+npm start
+```
 
-# 5. Test edge cases
-POST /leaves/apply (with invalid data)
+Frontend runs on `http://localhost:3001` (CRA default; may vary if the port is in use).
 
-# 6. Health check
-GET /health
+---
+
+## Demo accounts
+
+You can use these accounts (as shown on the login screen):
+- **Admin**: `admin@company.com` / `password`
+- **Employee**: `test@company.com` / `password123`
+
+If your local DB is fresh and demo accounts are not present, run `npm run init-db` in `backend/` again (or create users via admin UI / SQL inserts).
+
+---
+
+## Key API endpoints (summary)
+
+Base URL: `http://localhost:3000`
+
+### Auth
+
+- **POST** `/api/auth/login`
+  - Body:
+
+```json
+{ "email": "admin@company.com", "password": "password" }
+```
+
+  - Response (example):
+
+```json
+{
+  "token": "<jwt>",
+  "employee": {
+    "id": 1,
+    "name": "Admin",
+    "email": "admin@company.com",
+    "role": "admin",
+    "department_id": 1,
+    "department_name": "Engineering",
+    "joining_date": "2025-01-01"
+  }
+}
+```
+
+- **GET** `/api/auth/profile` (auth)
+  - Returns current employee profile (without password)
+
+### Employees
+
+- **GET** `/api/employees` (auth, manager/admin)
+- **GET** `/api/employees/:id` (auth)
+- **POST** `/api/employees` (auth, admin)
+- **PUT** `/api/employees/:id` (auth, admin)
+- **DELETE** `/api/employees/:id` (auth, admin)
+- **GET** `/api/employees/:id/balance` (auth)
+
+### Leaves
+
+- **POST** `/api/leaves/apply` (auth)
+- **GET** `/api/leaves` (auth, manager/admin)
+- **GET** `/api/leaves/my-leaves` (auth)
+- **PATCH** `/api/leaves/:id/status` (auth, manager/admin)
+
+### Health
+
+- **GET** `/health`
+
+---
+
+## Business rules & validations (highlights)
+
+- Joining date is respected for leave applications
+- Prevents invalid date ranges (end date before start date)
+- Prevents past-dated leave applications (where applicable)
+- Prevents insufficient balance
+- Prevents overlaps with already approved leaves
+- Prevents double-processing of approved/rejected requests
+
+---
+
+## Project documents
+
+- **HLD**: see `docs/HLD.md`
+
+---
+
+## Roadmap ideas
+
+- Leave types (sick/casual/paid) + accrual policies
+- Holiday calendar support
+- Notifications (Email/Slack)
+- Audit trail with approver comments
+- Pagination/filtering for admin lists
+- Docker + CI/CD
+

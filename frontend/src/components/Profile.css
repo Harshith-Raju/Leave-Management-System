@@ -52,4 +52,20 @@
     flex-direction: column;
     gap: 5px;
   }
+
+  .balance-value {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile {
+    padding: 10px 0;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
 }

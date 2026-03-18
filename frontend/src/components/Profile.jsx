@@ -12,6 +12,29 @@ const Profile = ({ user, token }) => {
   });
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/auth/profile', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+          // keep edit form in sync with latest server values
+          setFormData((prev) => ({
+            ...prev,
+            name: data?.name ?? prev.name,
+            email: data?.email ?? prev.email,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      }
+    };
+
     const fetchLeaveBalance = async () => {
       try {
         const response = await fetch(
@@ -34,8 +57,16 @@ const Profile = ({ user, token }) => {
       }
     };
 
+    fetchProfile();
     fetchLeaveBalance();
   }, [user.id, token]); // include stable props in deps
+
+  const departmentName =
+    profile?.department_name ?? profile?.departmentName ?? profile?.department?.name ?? null;
+  const joiningDateValue = profile?.joining_date ?? profile?.joiningDate ?? null;
+  const joiningDateText = joiningDateValue
+    ? new Date(joiningDateValue).toLocaleDateString()
+    : 'N/A';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -150,13 +181,11 @@ const Profile = ({ user, token }) => {
               </div>
               <div className="info-item">
                 <label>Department:</label>
-                <span>{profile.department_name || 'N/A'}</span>
+                <span>{departmentName || 'N/A'}</span>
               </div>
               <div className="info-item">
                 <label>Joining Date:</label>
-                <span>
-                  {new Date(profile.joining_date).toLocaleDateString()}
-                </span>
+                <span>{joiningDateText}</span>
               </div>
             </div>
           )}

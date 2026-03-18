@@ -249,6 +249,12 @@ body {
   }
 }
 
+@media (max-width: 480px) {
+  .main-content {
+    padding: 10px;
+  }
+}
+
 /* Animation Classes */
 .fade-in {
   animation: fadeIn 0.5s ease-in;
