@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './EmployeeManagement.css';
+import { apiUrl } from '../utils/api';
 
 const EmployeeManagement = ({ token }) => {
   const [employees, setEmployees] = useState([]);
@@ -14,14 +15,9 @@ const EmployeeManagement = ({ token }) => {
   });
   const [departments, setDepartments] = useState([]);
 
-  useEffect(() => {
-    fetchEmployees();
-    fetchDepartments();
-  }, [token]);
-
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/employees', {
+      const response = await fetch(apiUrl('/api/employees'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -36,7 +32,7 @@ const EmployeeManagement = ({ token }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   const fetchDepartments = async () => {
     try {
@@ -57,7 +53,7 @@ const EmployeeManagement = ({ token }) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:3000/api/employees', {
+      const response = await fetch(apiUrl('/api/employees'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,6 +82,11 @@ const EmployeeManagement = ({ token }) => {
       alert('Failed to add employee. Please try again.');
     }
   };
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchDepartments();
+  }, [fetchEmployees, token]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Login.css';
+import { apiUrl } from '../utils/api';
 
 const Signup = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ const Signup = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/employees', {
+      const response = await fetch(apiUrl('/api/employees'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +46,7 @@ const Signup = ({ onLogin }) => {
 
       if (response.ok) {
         // After successful signup, automatically log the user in
-        const loginResponse = await fetch('http://localhost:3000/api/auth/login', {
+        const loginResponse = await fetch(apiUrl('/api/auth/login'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -84,30 +85,14 @@ const Signup = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <div className="auth-split">
-          <div className="auth-brand">
-            <div className="auth-brand-inner">
-              <div className="auth-badge">
-                <i className="fas fa-user-plus"></i>
-              </div>
-              <h1 className="auth-brand-title">Create your account</h1>
-              <p className="auth-brand-subtitle">
-                Join your team workspace and request leave in seconds.
-              </p>
-              <ul className="auth-brand-points">
-                <li><i className="fas fa-id-badge"></i> Employee profile</li>
-                <li><i className="fas fa-calendar-alt"></i> Leave requests</li>
-                <li><i className="fas fa-balance-scale"></i> Balance tracking</li>
-              </ul>
+        <div className="login-card-inner">
+          <div className="login-header">
+            <div className="login-icon-container" aria-hidden="true">
+              <i className="fas fa-user-plus"></i>
             </div>
+            <h2 className="login-title">Create account</h2>
+            <p className="login-subtitle">Fill in the details to get started</p>
           </div>
-
-          <div className="auth-form">
-            <div className="login-card-inner">
-              <div className="login-header">
-                <h2 className="login-title">Create account</h2>
-                <p className="login-subtitle">Fill in the details to get started</p>
-              </div>
 
           {error && (
             <div className="error-message">
@@ -237,8 +222,6 @@ const Signup = ({ onLogin }) => {
           
           <div className="login-footer">
             <p>Already have an account? <Link to="/login">Sign in</Link></p>
-          </div>
-        </div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import Profile from './components/Profile';
 import Navbar from './components/Navbar';
 import LoadingSpinner from './components/LoadingSpinner';
 import './App.css';
+import { apiUrl } from './utils/api';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -21,7 +22,7 @@ function App() {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const response = await fetch('http://localhost:3000/api/auth/profile', {
+          const response = await fetch(apiUrl('/api/auth/profile'), {
             headers: {
               'Authorization': `Bearer ${storedToken}`
             }

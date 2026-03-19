@@ -1,6 +1,7 @@
 // components/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
+import { apiUrl } from '../utils/api';
 
 const Dashboard = ({ user, token }) => {
   const [stats, setStats] = useState({
@@ -16,7 +17,7 @@ const Dashboard = ({ user, token }) => {
     const fetchDashboardData = async () => {
       try {
         // Fetch leave balance
-        const balanceResponse = await fetch(`http://localhost:3000/api/employees/${user.id}/balance`, {
+        const balanceResponse = await fetch(apiUrl(`/api/employees/${user.id}/balance`), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -25,7 +26,7 @@ const Dashboard = ({ user, token }) => {
         const balanceData = await balanceResponse.json();
         
         // Fetch recent leaves
-        const leavesResponse = await fetch('http://localhost:3000/api/leaves/my-leaves', {
+        const leavesResponse = await fetch(apiUrl('/api/leaves/my-leaves'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }

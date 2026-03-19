@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
+import { apiUrl } from '../utils/api';
 
 const Profile = ({ user, token }) => {
   const [profile, setProfile] = useState(user);
@@ -14,7 +15,7 @@ const Profile = ({ user, token }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/auth/profile', {
+        const response = await fetch(apiUrl('/api/auth/profile'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -38,7 +39,7 @@ const Profile = ({ user, token }) => {
     const fetchLeaveBalance = async () => {
       try {
         const response = await fetch(
-          `http://localhost:3000/api/employees/${user.id}/balance`,
+          apiUrl(`/api/employees/${user.id}/balance`),
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -73,7 +74,7 @@ const Profile = ({ user, token }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/employees/${user.id}`,
+        apiUrl(`/api/employees/${user.id}`),
         {
           method: 'PUT',
           headers: {

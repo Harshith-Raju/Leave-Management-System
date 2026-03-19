@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import emailjs from 'emailjs-com';
 import './LeaveManagement.css';
+import { apiUrl } from '../utils/api';
 
 const LeaveManagement = ({ user, token }) => {
   const [leaves, setLeaves] = useState([]);
@@ -32,17 +33,9 @@ const LeaveManagement = ({ user, token }) => {
     emailjs.init("5uvXXP0huD9kzNw41"); // Replace with your actual EmailJS public key
   }, []);
 
-  useEffect(() => {
-    if (view === 'my-leaves') {
-      fetchMyLeaves();
-    } else {
-      fetchTeamLeaves();
-    }
-  }, [view, token]);
-
-  const fetchMyLeaves = async () => {
+  const fetchMyLeaves = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/leaves/my-leaves', {
+      const response = await fetch(apiUrl('/api/leaves/my-leaves'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -57,11 +50,11 @@ const LeaveManagement = ({ user, token }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const fetchTeamLeaves = async () => {
+  const fetchTeamLeaves = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/leaves', {
+      const response = await fetch(apiUrl('/api/leaves'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -76,13 +69,21 @@ const LeaveManagement = ({ user, token }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (view === 'my-leaves') {
+      fetchMyLeaves();
+    } else {
+      fetchTeamLeaves();
+    }
+  }, [view, fetchMyLeaves, fetchTeamLeaves]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:3000/api/leaves/apply', {
+      const response = await fetch(apiUrl('/api/leaves/apply'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +171,7 @@ const LeaveManagement = ({ user, token }) => {
 
   const handleStatusUpdate = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/api/leaves/${selectedLeave}/status`, {
+      const response = await fetch(apiUrl(`/api/leaves/${selectedLeave}/status`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
