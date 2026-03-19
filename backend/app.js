@@ -6,17 +6,32 @@ const authRoutes = require('./routes/auth');
 const employeeRoutes = require('./routes/employees');
 const leaveRoutes = require('./routes/leaves');
 const { connectToDatabase } = require('./config/database');
+const { seedDemo } = require('./scripts/seedDemo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors(
-  {
-    origin: 'http://localhost:3001', // Adjust as necessary for your frontend
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow server-to-server / curl / Postman (no Origin header)
+      if (!origin) return callback(null, true);
+
+      // If not configured, allow all origins (simplest for production demos)
+      if (allowedOrigins.length === 0) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
-  }
-));
+  })
+);
 app.use(express.json());
 
 // Routes
@@ -41,6 +56,10 @@ app.use((err, req, res, next) => {
 });
 
 connectToDatabase()
+  .then(() => {
+    // Ensure demo/admin credentials exist (idempotent)
+    return seedDemo();
+  })
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

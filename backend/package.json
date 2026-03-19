@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "init-db": "node scripts/initDB.js"
+    "init-db": "node scripts/initDB.js",
+    "seed-demo": "node -e \"require('dotenv').config(); const { connectToDatabase } = require('./config/database'); const { seedDemo } = require('./scripts/seedDemo'); connectToDatabase().then(() => seedDemo()).then(() => { console.log('Demo admin seeded'); process.exit(0); }).catch((e) => { console.error(e); process.exit(1); });\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
