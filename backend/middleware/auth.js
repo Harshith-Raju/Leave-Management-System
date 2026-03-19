@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
 
 const auth = {
   // Verify JWT token
@@ -33,6 +32,15 @@ const auth = {
       return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
     }
     next();
+  },
+
+  // Allow the same user or admin
+  requireSelfOrAdmin: (req, res, next) => {
+    const requestedId = Number(req.params.id);
+    if (req.user.role === 'admin' || Number(req.user.id) === requestedId) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Access denied.' });
   }
 };
 

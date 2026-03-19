@@ -11,10 +11,10 @@ router.get('/', auth.verifyToken, auth.requireManager, employeeController.getAll
 router.get('/:id', auth.verifyToken, employeeController.getEmployeeById);
 
 // Create new employee (admin only)
-router.post('/', auth.verifyToken, auth.requireAdmin, validate.employee, validate.checkValidation, employeeController.createEmployee);
+router.post('/', validate.employeeCreate, validate.checkValidation, employeeController.createEmployee);
 
 // Update employee (admin only)
-router.put('/:id', auth.verifyToken, auth.requireAdmin, validate.employee, validate.checkValidation, employeeController.updateEmployee);
+router.put('/:id', auth.verifyToken, auth.requireSelfOrAdmin, validate.employeeUpdate, validate.checkValidation, employeeController.updateEmployee);
 
 // Delete employee (admin only)
 router.delete('/:id', auth.verifyToken, auth.requireAdmin, employeeController.deleteEmployee);

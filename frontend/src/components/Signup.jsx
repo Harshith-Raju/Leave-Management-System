@@ -84,112 +84,162 @@ const Signup = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <div className="login-icon">
-          <i className="fas fa-user-plus"></i>
-        </div>
-        <h1 className="login-title">Create Account</h1>
-        <p className="login-subtitle">Sign up for a new employee account</p>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="name" className="form-label">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              className="form-control"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
+        <div className="auth-split">
+          <div className="auth-brand">
+            <div className="auth-brand-inner">
+              <div className="auth-badge">
+                <i className="fas fa-user-plus"></i>
+              </div>
+              <h1 className="auth-brand-title">Create your account</h1>
+              <p className="auth-brand-subtitle">
+                Join your team workspace and request leave in seconds.
+              </p>
+              <ul className="auth-brand-points">
+                <li><i className="fas fa-id-badge"></i> Employee profile</li>
+                <li><i className="fas fa-calendar-alt"></i> Leave requests</li>
+                <li><i className="fas fa-balance-scale"></i> Balance tracking</li>
+              </ul>
+            </div>
           </div>
+
+          <div className="auth-form">
+            <div className="login-card-inner">
+              <div className="login-header">
+                <h2 className="login-title">Create account</h2>
+                <p className="login-subtitle">Fill in the details to get started</p>
+              </div>
+
+          {error && (
+            <div className="error-message">
+              <i className="fas fa-exclamation-circle"></i>
+              {error}
+            </div>
+          )}
           
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              className="form-control"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="department" className="form-label">Department</label>
-            <select
-              id="department"
-              name="department_id"
-              className="form-control"
-              value={formData.department_id}
-              onChange={handleInputChange}
-              required
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label htmlFor="name" className="form-label">Full Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                className="form-control"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Enter your full name"
+                autoComplete="name"
+                required
+              />
+              <i className="fas fa-user input-icon"></i>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="form-control"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Enter your email"
+                autoComplete="email"
+                required
+              />
+              <i className="fas fa-envelope input-icon"></i>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="department" className="form-label">Department</label>
+              <select
+                id="department"
+                name="department_id"
+                className="form-control"
+                value={formData.department_id}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="1">Engineering</option>
+                <option value="2">HR</option>
+                <option value="3">Marketing</option>
+                <option value="4">Sales</option>
+                <option value="5">Finance</option>
+              </select>
+              <i className="fas fa-building input-icon"></i>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="joining_date" className="form-label">Joining Date</label>
+              <input
+                type="date"
+                id="joining_date"
+                name="joining_date"
+                className="form-control"
+                value={formData.joining_date}
+                onChange={handleInputChange}
+                required
+              />
+              <i className="fas fa-calendar-day input-icon"></i>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                className="form-control"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Create a password"
+                autoComplete="new-password"
+                required
+                minLength="6"
+              />
+              <i className="fas fa-lock input-icon"></i>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                className="form-control"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+                required
+                minLength="6"
+              />
+              <i className="fas fa-check-circle input-icon"></i>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="btn btn-primary login-btn"
+              disabled={loading}
             >
-              <option value="1">Engineering</option>
-              <option value="2">HR</option>
-              <option value="3">Marketing</option>
-              <option value="4">Sales</option>
-              <option value="5">Finance</option>
-            </select>
-          </div>
+              {loading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-arrow-right"></i>
+                  Continue
+                </>
+              )}
+            </button>
+          </form>
           
-          <div className="form-group">
-            <label htmlFor="joining_date" className="form-label">Joining Date</label>
-            <input
-              type="date"
-              id="joining_date"
-              name="joining_date"
-              className="form-control"
-              value={formData.joining_date}
-              onChange={handleInputChange}
-              required
-            />
+          <div className="login-footer">
+            <p>Already have an account? <Link to="/login">Sign in</Link></p>
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              className="form-control"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              minLength="6"
-            />
+        </div>
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              className="form-control"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              required
-              minLength="6"
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            className="btn btn-primary login-btn"
-            disabled={loading}
-          >
-            {loading ? 'Creating Account...' : 'Create Account'}
-            {loading && <i className="fas fa-spinner fa-spin"></i>}
-          </button>
-        </form>
-        
-        <div className="login-footer">
-          <p>Already have an account? <Link to="/login">Sign in here</Link></p>
         </div>
       </div>
     </div>

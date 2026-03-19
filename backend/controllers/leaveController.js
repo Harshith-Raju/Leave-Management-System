@@ -1,7 +1,6 @@
 const LeaveRequest = require('../models/leaveRequest');
 const LeaveBalance = require('../models/leaveBalance');
 const Employee = require('../models/employee');
-const db = require('../config/database');
 
 const leaveController = {
   // Apply for leave
@@ -28,189 +27,143 @@ const leaveController = {
     const leaveDays = calculateWorkingDays(startDate, endDate);
     
     // Check if employee has enough balance
-    LeaveBalance.findByEmployeeId(employeeId, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
-        return res.status(404).json({ error: 'Leave balance not found' });
-      }
-      
-      const balance = results[0].balance;
-      
-      if (balance < leaveDays) {
-        return res.status(400).json({ error: 'Insufficient leave balance' });
-      }
-      
-      // Check for overlapping leave requests
-      LeaveRequest.checkOverlap(employeeId, start_date, end_date, null, (err, overlapResults) => {
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
+    LeaveBalance.findByEmployeeId(employeeId)
+      .then(async (results) => {
+        const balanceDoc =
+          results.length > 0 ? results[0] : await LeaveBalance.ensureForEmployee(employeeId);
+
+        const balance = balanceDoc.balance;
+
+        if (balance < leaveDays) {
+          return res.status(400).json({ error: 'Insufficient leave balance' });
         }
-        
+
+        const overlapResults = await LeaveRequest.checkOverlap(
+          employeeId,
+          start_date,
+          end_date,
+          null
+        );
+
         if (overlapResults.length > 0) {
           return res.status(400).json({ error: 'Overlapping leave request exists' });
         }
-        
-        // Check if leave is before joining date
-        Employee.findById(employeeId, (err, empResults) => {
-          if (err) {
-            return res.status(500).json({ error: 'Database error' });
-          }
-          
-          if (empResults.length === 0) {
-            return res.status(404).json({ error: 'Employee not found' });
-          }
-          
-          const joiningDate = new Date(empResults[0].joining_date);
-          
-          if (startDate < joiningDate) {
-            return res.status(400).json({ error: 'Cannot apply for leave before joining date' });
-          }
-          
-          // Create leave request
-          const leaveData = {
-            employee_id: employeeId,
-            start_date,
-            end_date,
-            reason
-          };
-          
-          LeaveRequest.create(leaveData, (err, results) => {
-            if (err) {
-              return res.status(500).json({ error: 'Database error' });
-            }
-            
-            res.status(201).json({ 
-              message: 'Leave application submitted successfully', 
-              leaveRequestId: results.insertId 
-            });
-          });
+
+        const empResults = await Employee.findByIdWithDepartment(employeeId);
+        if (empResults.length === 0) {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        const joiningDate = new Date(empResults[0].joining_date);
+        if (startDate < joiningDate) {
+          return res.status(400).json({ error: 'Cannot apply for leave before joining date' });
+        }
+
+        const leaveData = { employee_id: employeeId, start_date, end_date, reason };
+        const created = await LeaveRequest.createLeave(leaveData);
+
+        res.status(201).json({
+          message: 'Leave application submitted successfully',
+          leaveRequestId: created.insertId,
         });
-      });
-    });
+      })
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   },
   
   // Get all leave requests (for managers/admins)
   getAllLeaveRequests: (req, res) => {
-    LeaveRequest.findAll((err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      res.json(results);
-    });
+    LeaveRequest.findAll()
+      .then((results) =>
+        res.json(
+          results.map((r) => {
+            const sanitized = { ...r };
+            delete sanitized._id;
+            delete sanitized.__v;
+            return sanitized;
+          })
+        )
+      )
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   },
   
   // Get leave requests for current employee
   getMyLeaveRequests: (req, res) => {
     const employeeId = req.user.id;
     
-    LeaveRequest.findByEmployeeId(employeeId, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      res.json(results);
-    });
+    LeaveRequest.findByEmployeeId(employeeId)
+      .then((results) =>
+        res.json(
+          results.map((r) => {
+            const sanitized = { ...r };
+            delete sanitized._id;
+            delete sanitized.__v;
+            return sanitized;
+          })
+        )
+      )
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   },
   
   // Get leave request by ID
   getLeaveRequestById: (req, res) => {
     const { id } = req.params;
     
-    LeaveRequest.findById(id, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
-        return res.status(404).json({ error: 'Leave request not found' });
-      }
-      
-      res.json(results[0]);
-    });
+    LeaveRequest.findById(id)
+      .then((results) => {
+        if (results.length === 0) {
+          return res.status(404).json({ error: 'Leave request not found' });
+        }
+        const sanitized = { ...results[0] };
+        delete sanitized._id;
+        delete sanitized.__v;
+        res.json(sanitized);
+      })
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   },
   
   // Approve or reject leave request
   updateLeaveStatus: (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    const managerId = req.user.id;
     
     if (!['APPROVED', 'REJECTED'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
     
     // First get the leave request details
-    LeaveRequest.findById(id, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
-        return res.status(404).json({ error: 'Leave request not found' });
-      }
-      
-      const leaveRequest = results[0];
-      
-      // If already processed
-      if (leaveRequest.status !== 'PENDING') {
-        return res.status(400).json({ error: 'Leave request already processed' });
-      }
-      
-      // If approving, deduct from balance
-      if (status === 'APPROVED') {
-        const startDate = new Date(leaveRequest.start_date);
-        const endDate = new Date(leaveRequest.end_date);
-        const leaveDays = calculateWorkingDays(startDate, endDate);
-        
-        // Use transaction to ensure data consistency
-        db.beginTransaction((err) => {
-          if (err) {
-            return res.status(500).json({ error: 'Database error' });
+    LeaveRequest.findById(id)
+      .then(async (results) => {
+        if (results.length === 0) {
+          return res.status(404).json({ error: 'Leave request not found' });
+        }
+
+        const leaveRequest = results[0];
+
+        if (leaveRequest.status !== 'PENDING') {
+          return res.status(400).json({ error: 'Leave request already processed' });
+        }
+
+        const adminReason = req.body?.admin_reason ?? '';
+
+        if (status === 'APPROVED') {
+          const startDate = new Date(leaveRequest.start_date);
+          const endDate = new Date(leaveRequest.end_date);
+          const leaveDays = calculateWorkingDays(startDate, endDate);
+
+          try {
+            await LeaveBalance.deductDays(leaveRequest.employee_id, leaveDays);
+          } catch (e) {
+            return res.status(400).json({ error: e.message });
           }
-          
-          // Deduct leave days
-          LeaveBalance.deductDays(leaveRequest.employee_id, leaveDays, (err, deductResults) => {
-            if (err) {
-              return db.rollback(() => {
-                res.status(400).json({ error: err.message });
-              });
-            }
-            
-            // Update leave request status
-            LeaveRequest.updateStatus(id, status, (err, updateResults) => {
-              if (err) {
-                return db.rollback(() => {
-                  res.status(500).json({ error: 'Database error' });
-                });
-              }
-              
-              db.commit((err) => {
-                if (err) {
-                  return db.rollback(() => {
-                    res.status(500).json({ error: 'Database error' });
-                  });
-                }
-                
-                res.json({ message: 'Leave request approved successfully' });
-              });
-            });
-          });
-        });
-      } else {
-        // Just reject the request
-        LeaveRequest.updateStatus(id, status, (err, results) => {
-          if (err) {
-            return res.status(500).json({ error: 'Database error' });
-          }
-          
-          res.json({ message: 'Leave request rejected' });
-        });
-      }
-    });
+
+          await LeaveRequest.updateStatus(id, status, adminReason);
+          return res.json({ message: 'Leave request approved successfully' });
+        }
+
+        await LeaveRequest.updateStatus(id, status, adminReason);
+        return res.json({ message: 'Leave request rejected' });
+      })
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   }
 };
 

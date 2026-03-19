@@ -8,73 +8,57 @@ const authController = {
     const { email, password } = req.body;
     
     // Find employee by email
-    Employee.findByEmail(email, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
-        return res.status(400).json({ error: 'Invalid email or password' });
-      }
-      
-      const employee = results[0];
-      
-      // Check password
-      bcrypt.compare(password, employee.password, (err, isMatch) => {
-        if (err) {
-          return res.status(500).json({ error: 'Server error' });
-        }
-        
-        if (!isMatch) {
+    Employee.findByEmail(email)
+      .then((results) => {
+        if (results.length === 0) {
           return res.status(400).json({ error: 'Invalid email or password' });
         }
 
-        // Create JWT token
-        const token = jwt.sign(
-          { id: employee.id, email: employee.email, role: employee.role },
-          process.env.JWT_SECRET,
-          { expiresIn: '7d' }
-        );
+        const employee = results[0];
 
-        // Return full profile (includes department_name/joining_date)
-        Employee.findById(employee.id, (err, results) => {
-          if (err) {
-            return res.status(500).json({ error: 'Database error' });
+        return bcrypt.compare(password, employee.password).then((isMatch) => {
+          if (!isMatch) {
+            return res.status(400).json({ error: 'Invalid email or password' });
           }
 
-          if (results.length === 0) {
-            return res.status(404).json({ error: 'Employee not found' });
-          }
+          const token = jwt.sign(
+            { id: employee.id, email: employee.email, role: employee.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+          );
 
-          const fullEmployee = results[0];
-          delete fullEmployee.password;
+          return Employee.findByIdWithDepartment(employee.id).then((fullResults) => {
+            if (fullResults.length === 0) {
+              return res.status(404).json({ error: 'Employee not found' });
+            }
 
-          res.json({
-            token,
-            employee: fullEmployee,
+            const fullEmployee = fullResults[0];
+            delete fullEmployee.password;
+            delete fullEmployee._id;
+            delete fullEmployee.__v;
+
+            res.json({ token, employee: fullEmployee });
           });
         });
-      });
-    });
+      })
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   },
   
   // Get current user profile
   getProfile: (req, res) => {
-    Employee.findById(req.user.id, (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (results.length === 0) {
-        return res.status(404).json({ error: 'Employee not found' });
-      }
-      
-      const employee = results[0];
-      // Remove password from response
-      delete employee.password;
-      
-      res.json(employee);
-    });
+    Employee.findByIdWithDepartment(req.user.id)
+      .then((results) => {
+        if (results.length === 0) {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        const employee = results[0];
+        delete employee.password;
+        delete employee._id;
+        delete employee.__v;
+        res.json(employee);
+      })
+      .catch(() => res.status(500).json({ error: 'Database error' }));
   }
 };
 

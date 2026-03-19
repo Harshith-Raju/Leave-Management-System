@@ -38,74 +38,117 @@ const Login = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <div className="login-card-inner">
-          <div className="login-header">
-            <div className="login-icon-container">
-              <i className="fas fa-calendar-alt login-icon"></i>
+        <div className="auth-split">
+          {/* Brand Panel - Left Side */}
+          <div className="auth-brand">
+            <div className="auth-brand-inner">
+              <div className="auth-badge">
+                <i className="fas fa-calendar-check"></i>
+              </div>
+              <h1 className="auth-brand-title">Leave Management</h1>
+              <p className="auth-brand-subtitle">
+                Track leave, approvals, and balances in one place.
+              </p>
+              <ul className="auth-brand-points">
+                <li>
+                  <i className="fas fa-shield-alt"></i>
+                  <span>Secure access</span>
+                </li>
+                <li>
+                  <i className="fas fa-bolt"></i>
+                  <span>Fast approvals</span>
+                </li>
+                <li>
+                  <i className="fas fa-chart-line"></i>
+                  <span>Clear insights</span>
+                </li>
+              </ul>
             </div>
-            <h1 className="login-title">Leave Management</h1>
-            <p className="login-subtitle">Sign in to access your account</p>
           </div>
 
-          {error && (
-            <div className="error-message">
-              <i className="fas fa-exclamation-circle"></i>
-              {error}
-            </div>
-          )}
+          {/* Form Panel - Right Side */}
+          <div className="auth-form">
+            <div className="login-card-inner">
+              <div className="login-header">
+                <h2 className="login-title">Welcome back</h2>
+                <p className="login-subtitle">Sign in to continue</p>
+              </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">Email</label>
-              <input
-                type="email"
-                id="email"
-                className="form-control"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
-              />
-              <i className="fas fa-envelope input-icon"></i>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">Password</label>
-              <input
-                type="password"
-                id="password"
-                className="form-control"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
-              <i className="fas fa-lock input-icon"></i>
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary login-btn"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-sign-in-alt"></i>
-                  Sign In
-                </>
+              {error && (
+                <div className="error-message">
+                  <i className="fas fa-exclamation-circle"></i>
+                  <span>{error}</span>
+                </div>
               )}
-            </button>
-          </form>
 
-          <div className="demo-accounts">
-            <h3>Demo Accounts</h3>
-            <p><strong>Admin:</strong> admin@company.com / password</p>
-            <p><strong>Employee:</strong> test@company.com / password123</p>
+              <form onSubmit={handleSubmit} className="login-form">
+                <div className="form-group">
+                  <label htmlFor="email" className="form-label">Email</label>
+                  <div className="input-wrapper">
+                    <i className="fas fa-envelope input-icon"></i>
+                    <input
+                      type="email"
+                      id="email"
+                      className="form-control"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@company.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="password" className="form-label">Password</label>
+                  <div className="input-wrapper">
+                    <i className="fas fa-lock input-icon"></i>
+                    <input
+                      type="password"
+                      id="password"
+                      className="form-control"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="login-btn"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      Continue
+                      <i className="fas fa-arrow-right"></i>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <details className="demo-details">
+                <summary className="demo-summary">Use demo accounts</summary>
+                <div className="demo-content">
+                  <div className="demo-row">
+                    <span className="demo-label">Admin</span>
+                    <span className="demo-value">admin@company.com / password</span>
+                  </div>
+                  <div className="demo-row">
+                    <span className="demo-label">Employee</span>
+                    <span className="demo-value">employee@company.com / password123</span>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       </div>

@@ -1,98 +1,66 @@
-const mysql = require('mysql2');
 require('dotenv').config();
+const { connectToDatabase } = require('../config/database');
+const Department = require('../models/department');
+const Employee = require('../models/employee');
+const LeaveBalance = require('../models/leaveBalance');
+const Counter = require('../models/counter');
 
-// Create connection without specifying database first
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD
-});
+async function ensureCounters() {
+  // Initialize counters close to MySQL sample ids
+  await Counter.findOneAndUpdate({ name: 'employees' }, { $setOnInsert: { name: 'employees', seq: 0 } }, { upsert: true });
+  await Counter.findOneAndUpdate({ name: 'leave_requests' }, { $setOnInsert: { name: 'leave_requests', seq: 0 } }, { upsert: true });
+}
 
-// Create database
-connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`, (err) => {
-  if (err) {
-    console.error('Error creating database:', err);
-    process.exit(1);
+async function seed() {
+  await connectToDatabase();
+  await ensureCounters();
+
+  const departments = [
+    { id: 1, name: 'Engineering' },
+    { id: 2, name: 'HR' },
+    { id: 3, name: 'Marketing' },
+    { id: 4, name: 'Sales' },
+    { id: 5, name: 'Finance' },
+  ];
+
+  for (const dept of departments) {
+    await Department.updateOne({ id: dept.id }, { $setOnInsert: dept }, { upsert: true });
   }
-  
-  console.log('Database created or already exists');
-  
-  // Switch to the database
-  connection.query(`USE ${process.env.DB_NAME}`, (err) => {
-    if (err) {
-      console.error('Error using database:', err);
-      process.exit(1);
-    }
-    
-    // Create tables
-    const queries = [
-      `CREATE TABLE IF NOT EXISTS departments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`,
-      
-      `CREATE TABLE IF NOT EXISTS employees (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        department_id INT NOT NULL,
-        joining_date DATE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role ENUM('employee', 'manager', 'admin') DEFAULT 'employee',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
-      )`,
-      
-      `CREATE TABLE IF NOT EXISTS leave_balances (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        employee_id INT NOT NULL UNIQUE,
-        balance INT NOT NULL DEFAULT 20 CHECK (balance >= 0),
-        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
-      )`,
-      
-      `CREATE TABLE IF NOT EXISTS leave_requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        employee_id INT NOT NULL,
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        reason TEXT,
-        status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-        INDEX idx_employee_status (employee_id, status),
-        CONSTRAINT chk_dates CHECK (start_date <= end_date)
-      )`,
-      
-      `INSERT IGNORE INTO departments (name) VALUES 
-        ('Engineering'), 
-        ('HR'), 
-        ('Marketing'), 
-        ('Sales'), 
-        ('Finance')`
-    ];
-    
-    // Execute queries sequentially
-    const executeQuery = (index) => {
-      if (index >= queries.length) {
-        console.log('Database initialization completed successfully!');
-        connection.end();
-        return;
-      }
-      
-      connection.query(queries[index], (err) => {
-        if (err) {
-          console.error('Error executing query:', err);
-          connection.end();
-          process.exit(1);
-        }
-        
-        executeQuery(index + 1);
-      });
-    };
-    
-    executeQuery(0);
-  });
+
+  // Demo accounts used by frontend
+  // Admin: admin@company.com / password
+  // Employee: test@company.com / password123
+  const existingAdmin = await Employee.findByEmail('admin@company.com');
+  if (existingAdmin.length === 0) {
+    const admin = await Employee.createEmployee({
+      name: 'Admin User',
+      email: 'admin@company.com',
+      department_id: 1,
+      joining_date: '2024-01-01',
+      password: 'password',
+      role: 'admin',
+    });
+    await LeaveBalance.ensureForEmployee(admin.id);
+  }
+
+  const existingEmployee = await Employee.findByEmail('test@company.com');
+  if (existingEmployee.length === 0) {
+    const emp = await Employee.createEmployee({
+      name: 'Test Employee',
+      email: 'test@company.com',
+      department_id: 2,
+      joining_date: '2024-02-01',
+      password: 'password123',
+      role: 'employee',
+    });
+    await LeaveBalance.ensureForEmployee(emp.id);
+  }
+
+  console.log('MongoDB initialization completed successfully!');
+  process.exit(0);
+}
+
+seed().catch((err) => {
+  console.error('Init failed:', err);
+  process.exit(1);
 });
